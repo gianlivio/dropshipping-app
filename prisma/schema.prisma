@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// AUTENTICAZIONE
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role      @default(UTENTEBASIC)
+  
+  // Relazioni
+  accounts      Account[]
+  sessions      Session[]
+  master        Master?       // Se è un Master
+  basicProfile  BasicProfile? // Se è un Basic
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  SUPER_ADMIN
+  UTENTEMASTER
+  UTENTEBASIC
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ============================================
+// PROFILI UTENTE
+// ============================================
+
+model Master {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Info negozio
+  storeName       String
+  storeSlug       String   @unique // per URL interne
+  description     String?
+  logo            String?
+  
+  // Branding
+  primaryColor    String   @default("#3B82F6")
+  secondaryColor  String   @default("#1E40AF")
+  
+  // Custom domain
+  customDomain    String?  @unique
+  domainVerified  Boolean  @default(false)
+  
+  // Relazioni
+  products        Product[]
+  orders          Order[]
+  inviteLinks     InviteLink[]
+  basicUsers      BasicProfile[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BasicProfile {
+  id        String @id @default(cuid())
+  userId    String @unique
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Associazione al Master
+  masterId  String
+  master    Master @relation(fields: [masterId], references: [id])
+  
+  // Relazioni
+  orders    Order[]
+  cart      Cart?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// INVITI
+// ============================================
+
+model InviteLink {
+  id          String   @id @default(cuid())
+  masterId    String
+  master      Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  
+  token       String   @unique // codice univoco per il link
+  usageCount  Int      @default(0) // quante volte è stato usato
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime? // opzionale: scadenza
+}
+
+// ============================================
+// PRODOTTI
+// ============================================
+
+model Product {
+  id          String   @id @default(cuid())
+  masterId    String
+  master      Master   @relation(fields: [masterId], references: [id], onDelete: Cascade)
+  
+  name        String
+  slug        String
+  description String?
+  price       Float
+  stock       Int      @default(0)
+  images      String[] // array di URL immagini
+  
+  isActive    Boolean  @default(true)
+  
+  // Relazioni
+  orderItems  OrderItem[]
+  cartItems   CartItem[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([masterId, slug]) // slug unico per Master
+}
+
+// ============================================
+// CARRELLO
+// ============================================
+
+model Cart {
+  id            String   @id @default(cuid())
+  basicProfileId String  @unique
+  basicProfile   BasicProfile @relation(fields: [basicProfileId], references: [id], onDelete: Cascade)
+  
+  items         CartItem[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  quantity  Int     @default(1)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([cartId, productId]) // un prodotto una sola volta nel carrello
+}
+
+// ============================================
+// ORDINI
+// ============================================
+
+model Order {
+  id              String   @id @default(cuid())
+  
+  // Chi ha comprato
+  basicProfileId  String
+  basicProfile    BasicProfile @relation(fields: [basicProfileId], references: [id])
+  
+  // Da quale Master
+  masterId        String
+  master          Master   @relation(fields: [masterId], references: [id])
+  
+  // Dettagli ordine
+  items           OrderItem[]
+  total           Float
+  status          OrderStatus @default(PENDING)
+  
+  // Pagamento
+  stripeSessionId String?  @unique
+  paymentIntentId String?  @unique
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum OrderStatus {
+  PENDING    // In attesa di pagamento
+  PAID       // Pagato
+  PROCESSING // In preparazione
+  SHIPPED    // Spedito
+  DELIVERED  // Consegnato
+  CANCELLED  // Annullato
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  
+  quantity  Int
+  price     Float   // prezzo al momento dell'acquisto
+  
+  createdAt DateTime @default(now())
+}
