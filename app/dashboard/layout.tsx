@@ -21,31 +21,34 @@ export default async function DashboardLayout({
       ? [
           { href: "/dashboard", label: "Dashboard" },
           { href: "/dashboard/products", label: "Prodotti" },
+          { href: "/dashboard/orders", label: "Ordini" },
           { href: "/dashboard/invites", label: "Inviti" },
+          // 👇 QUESTA È LA VOCE CHE TI MANCA
+          { href: "/dashboard/store", label: "Negozio" },
         ]
       : role === "UTENTEBASIC"
       ? [
           { href: "/dashboard", label: "Dashboard" },
           { href: "/dashboard/cart", label: "Carrello" },
-          { href: "/dashboard/orders", label: "I miei ordini (presto)" },
+          { href: "/dashboard/orders", label: "Ordini" },
         ]
       : [
           // SUPER_ADMIN
           { href: "/dashboard", label: "Dashboard" },
-          { href: "/dashboard/admin/masters", label: "Admin – Masters" },
+          { href: "/dashboard/admin/masters", label: "Master" },
         ]
 
   return (
-    <div className="min-h-screen flex bg-gray-100">
+    <div className="min-h-screen flex bg-neutral-100">
       {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md p-4 flex flex-col">
+      <aside className="w-64 bg-white border-r-4 border-black p-4 flex flex-col">
         <div className="mb-8">
-          <h2 className="text-xl font-bold">Livio App</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-xl font-bold tracking-tight">Console</h2>
+          <p className="text-sm text-neutral-600">
             Ruolo: <span className="font-semibold">{role}</span>
           </p>
           {session.user.email && (
-            <p className="text-xs text-gray-400 break-all mt-1">
+            <p className="text-xs text-neutral-500 break-all mt-1">
               {session.user.email}
             </p>
           )}
@@ -56,7 +59,7 @@ export default async function DashboardLayout({
             <Link
               key={item.href}
               href={item.href}
-              className="block px-3 py-2 rounded hover:bg-blue-50 text-gray-700 text-sm"
+              className="block px-3 py-2 rounded border-2 border-black bg-neutral-100 hover:bg-neutral-200 text-sm font-medium transition"
             >
               {item.label}
             </Link>
@@ -70,7 +73,7 @@ export default async function DashboardLayout({
         >
           <button
             type="submit"
-            className="w-full bg-red-500 text-white py-2 rounded text-sm hover:bg-red-600 transition"
+            className="w-full border-2 border-black bg-neutral-900 text-white py-2 rounded text-sm font-semibold hover:bg-neutral-700 transition"
           >
             Logout
           </button>
@@ -78,7 +81,7 @@ export default async function DashboardLayout({
       </aside>
 
       {/* Contenuto */}
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 p-6">{children}</main>
     </div>
   )
 }

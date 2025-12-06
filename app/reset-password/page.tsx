@@ -1,32 +1,26 @@
 "use client"
 
-import { useSearchParams, useRouter } from "next/navigation"
-import { useEffect, useState, Suspense } from "react"
+import { FormEvent, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 
-function ResetPasswordForm() {
-  const searchParams = useSearchParams()
+export default function ResetPasswordPage() {
   const router = useRouter()
-  const token = searchParams.get("token")
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token") || ""
 
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (!token) {
-      setError("Token non valido")
-    }
-  }, [token])
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError("")
     setSuccess("")
 
     if (!token) {
-      setError("Token non valido")
+      setError("Token mancante o non valido")
       return
     }
 
@@ -35,32 +29,26 @@ function ResetPasswordForm() {
       return
     }
 
-    if (password.length < 6) {
-      setError("La password deve avere almeno 6 caratteri")
-      return
-    }
-
-    setLoading(true)
-
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      setLoading(true)
+
+      const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password }),
       })
 
-      const data = await res.json()
+      const data = await response.json()
 
-      if (!res.ok) {
+      if (!response.ok) {
         setError(data.error || "Errore durante il reset")
         return
       }
 
-      setSuccess("Password aggiornata con successo. Ora puoi fare login.")
-      // opzionale: redirect dopo qualche secondo
+      setSuccess("Password aggiornata. Ora puoi accedere.")
       setTimeout(() => {
         router.push("/login")
-      }, 2000)
+      }, 1200)
     } catch (err) {
       setError("Errore di connessione")
     } finally {
@@ -69,69 +57,87 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          Reimposta password
-        </h1>
-
-        {error && (
-          <div className="mb-4 bg-red-100 text-red-700 p-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="mb-4 bg-green-100 text-green-700 p-3 rounded">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 mb-2">Nuova password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              minLength={6}
-            />
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-100 to-gray-300">
+      <div className="w-full max-w-sm">
+        <div className="bg-gray-50 border-4 border-black rounded-2xl shadow-[6px_6px_0px_#000] p-6">
+          <div className="mb-6">
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">
+              Nuova password
+            </h1>
+            <p className="text-xs text-gray-600 mt-1 uppercase tracking-widest">
+              Imposta una nuova password
+            </p>
           </div>
 
-          <div>
-            <label className="block text-gray-700 mb-2">
-              Conferma password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-              minLength={6}
-            />
-          </div>
+          {error && (
+            <div className="mb-3 border-2 border-black bg-red-100 text-red-800 text-xs px-3 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={loading || !token}
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition disabled:bg-gray-400"
-          >
-            {loading ? "Salvataggio..." : "Salva nuova password"}
-          </button>
-        </form>
+          {success && (
+            <div className="mb-3 border-2 border-black bg-green-100 text-green-800 text-xs px-3 py-2 rounded-lg">
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-800 mb-1 uppercase tracking-wide">
+                Nuova password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-800 mb-1 uppercase tracking-wide">
+                Conferma password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full px-3 py-2 border-2 border-black rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-gray-700"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full mt-2 border-2 border-black bg-gray-900 text-gray-50 py-2 rounded-lg text-sm font-semibold uppercase tracking-widest flex items-center justify-center gap-2 disabled:bg-gray-500 disabled:cursor-not-allowed transition"
+            >
+              {loading ? (
+                <>
+                  <span className="text-[10px]">SALVATAGGIO</span>
+                  <span className="flex gap-1">
+                    <span className="w-2 h-2 bg-gray-50 animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-2 h-2 bg-gray-50 animate-bounce" style={{ animationDelay: "120ms" }} />
+                    <span className="w-2 h-2 bg-gray-50 animate-bounce" style={{ animationDelay: "240ms" }} />
+                  </span>
+                </>
+              ) : (
+                "Conferma"
+              )}
+            </button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <a
+              href="/login"
+              className="text-xs text-gray-700 underline underline-offset-2 hover:text-black"
+            >
+              Torna al login
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
-
-export default function ResetPasswordPage() {
-  return (
-    <Suspense fallback={<div>Caricamento...</div>}>
-      <ResetPasswordForm />
-    </Suspense>
-  )
-}
-

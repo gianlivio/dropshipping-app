@@ -1,176 +1,119 @@
+import Link from "next/link"
 import { auth } from "@/auth"
-import { redirect } from "next/navigation"
-import { PrismaClient } from "@prisma/client"
 
-const prisma = new PrismaClient()
-
-export default async function DashboardPage() {
+export default async function DashboardHomePage() {
   const session = await auth()
 
-  if (!session) {
-    redirect("/login")
+  if (!session?.user) {
+    // In teoria il layout ha già fatto redirect,
+    // qui è solo per sicurezza.
+    return null
   }
 
   const role = session.user.role
-  const name = session.user.name || "Utente"
 
-  // 🔹 DASHBOARD MASTER
-  if (role === "UTENTEMASTER") {
-    // recuperiamo il master per mostrare lo storeSlug
-    const master = await prisma.master.findUnique({
-      where: { userId: session.user.id },
-    })
+  const isMaster = role === "UTENTEMASTER"
+  const isBasic = role === "UTENTEBASIC"
+  const isAdmin = role === "SUPER_ADMIN"
 
-    const publicUrl = master
-      ? `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/s/${
-          master.storeSlug
-        }`
-      : null
-
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Dashboard Master</h1>
-        <p className="text-gray-600">
-          Ciao <span className="font-semibold">{name}</span>, qui gestisci il tuo
-          negozio: prodotti, inviti ai clienti e in futuro ordini e pagamenti.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <a
-            href="/dashboard/products"
-            className="bg-white p-4 rounded-lg shadow hover:shadow-md transition"
-          >
-            <h2 className="font-semibold mb-1">Prodotti</h2>
-            <p className="text-sm text-gray-600">
-              Crea, modifica e gestisci il catalogo del tuo marketplace.
-            </p>
-          </a>
-
-          <a
-            href="/dashboard/invites"
-            className="bg-white p-4 rounded-lg shadow hover:shadow-md transition"
-          >
-            <h2 className="font-semibold mb-1">Inviti clienti</h2>
-            <p className="text-sm text-gray-600">
-              Genera link e QR code per far registrare i tuoi clienti.
-            </p>
-          </a>
-
-          <div className="bg-white p-4 rounded-lg shadow opacity-60">
-            <h2 className="font-semibold mb-1">Ordini (in arrivo)</h2>
-            <p className="text-sm text-gray-600">
-              Qui vedrai e gestirai gli ordini dei tuoi clienti.
-            </p>
-          </div>
-        </div>
-
-        {publicUrl && (
-          <div className="bg-white p-4 rounded-lg shadow mt-4">
-            <h2 className="font-semibold mb-2">Link pubblico del tuo shop</h2>
-            <p className="text-sm text-gray-600 mb-2">
-              Questo è l&apos;indirizzo che i tuoi clienti possono usare per
-              vedere i tuoi prodotti:
-            </p>
-            <a
-              href={publicUrl}
-              className="text-blue-600 text-sm break-all hover:underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              {publicUrl}
-            </a>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  // 🔹 DASHBOARD CLIENTE BASIC
-  if (role === "UTENTEBASIC") {
-    // troviamo il BasicProfile con il suo Master
-    const basicProfile = await prisma.basicProfile.findUnique({
-      where: { userId: session.user.id },
-      include: {
-        master: true,
-      },
-    })
-
-    // se per qualche motivo non c'è profilo, messaggio di fallback
-    if (!basicProfile || !basicProfile.master) {
-      return (
-        <div className="space-y-6">
-          <h1 className="text-3xl font-bold">Dashboard Cliente</h1>
-          <p className="text-gray-600">
-            Ciao <span className="font-semibold">{name}</span>, il tuo account non
-            risulta ancora collegato a un negozio.
-          </p>
-          <p className="text-sm text-gray-500">
-            Questo non dovrebbe succedere se ti sei registrato tramite un link di
-            invito. In caso contrario, contatta il supporto.
-          </p>
-        </div>
-      )
-    }
-
-    const master = basicProfile.master
-
-    const shopUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/s/${
-      master.storeSlug
-    }`
-
-    return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold">Dashboard Cliente</h1>
-        <p className="text-gray-600">
-          Ciao <span className="font-semibold">{name}</span>, sei cliente di{" "}
-          <span className="font-semibold">{master.storeName}</span>.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h2 className="font-semibold mb-2">Vai al negozio</h2>
-            <p className="text-sm text-gray-600 mb-3">
-              Apri la vetrina prodotti del negozio a cui sei collegato.
-            </p>
-            <a
-              href={shopUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-block bg-blue-500 text-white px-4 py-2 rounded text-sm hover:bg-blue-600 transition"
-            >
-              Apri il negozio
-            </a>
-            <p className="text-xs text-gray-400 mt-2 break-all">{shopUrl}</p>
-          </div>
-
-          <div className="bg-white p-4 rounded-lg shadow opacity-60">
-            <h2 className="font-semibold mb-1">I miei ordini (in arrivo)</h2>
-            <p className="text-sm text-gray-600">
-              Qui vedrai la cronologia dei tuoi acquisti quando implementeremo
-              gli ordini.
-            </p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // 🔹 DASHBOARD SUPER ADMIN
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Dashboard Super Admin</h1>
-      <p className="text-gray-600">
-        Ciao <span className="font-semibold">{name}</span>, qui in futuro potrai
-        gestire i Master, controllare i dati globali, ecc.
-      </p>
-
-      <div className="bg-white p-4 rounded-lg shadow opacity-60">
-        <h2 className="font-semibold mb-1">Gestione Master (in arrivo)</h2>
-        <p className="text-sm text-gray-600">
-          Qui potrai visualizzare e controllare tutti gli account Master.
+    <div className="flex flex-col h-full">
+      {/* Titolo semplice */}
+      <header className="mb-4 border-b-2 border-black pb-3">
+        <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">
+          Panoramica
+        </h1>
+        <p className="text-xs text-gray-600 mt-1">
+          Accesso rapido alle sezioni principali.
         </p>
-      </div>
+      </header>
+
+      {/* Griglia di azioni */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {isMaster && (
+          <>
+            <CardLink
+              href="/dashboard/products"
+              title="Prodotti"
+              description="Gestisci il catalogo."
+            />
+            <CardLink
+              href="/dashboard/invites"
+              title="Inviti"
+              description="Invita nuovi clienti."
+            />
+            <CardLink
+              href="/s/elettricashop"
+              title="Anteprima negozio"
+              description="Vedi lo store pubblico."
+            />
+          </>
+        )}
+
+        {isBasic && (
+          <>
+            <CardLink
+              href="/dashboard/cart"
+              title="Carrello"
+              description="Gestisci i prodotti nel carrello."
+            />
+            <CardLink
+              href="/dashboard/orders"
+              title="Ordini"
+              description="Vedi i tuoi acquisti."
+            />
+            <CardLink
+              href="/s/elettricashop"
+              title="Vai al negozio"
+              description="Sfoglia i prodotti."
+            />
+          </>
+        )}
+
+        {isAdmin && (
+          <>
+            <CardLink
+              href="/dashboard/admin/masters"
+              title="Master"
+              description="Elenco negozi e stati."
+            />
+            <CardLink
+              href="#"
+              title="Utenti"
+              description="Gestione utenti (presto)."
+            />
+            <CardLink
+              href="#"
+              title="Statistiche"
+              description="Report globali (presto)."
+            />
+          </>
+        )}
+      </section>
     </div>
   )
 }
 
+type CardLinkProps = {
+  href: string
+  title: string
+  description: string
+}
+
+function CardLink({ href, title, description }: CardLinkProps) {
+  return (
+    <Link href={href}>
+      <div className="h-full border-2 border-black rounded-xl bg-gray-50 hover:bg-gray-900 hover:text-gray-50 transition p-3 flex flex-col justify-between cursor-pointer">
+        <div>
+          <h2 className="text-sm font-bold mb-1">{title}</h2>
+          <p className="text-[11px] text-gray-700 group-hover:text-gray-200">
+            {description}
+          </p>
+        </div>
+        <p className="text-[10px] mt-3 uppercase tracking-widest">
+          Apri
+        </p>
+      </div>
+    </Link>
+  )
+}

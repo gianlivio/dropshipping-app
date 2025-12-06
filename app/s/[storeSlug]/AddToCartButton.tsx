@@ -2,37 +2,40 @@
 
 import { useState } from "react"
 
-export default function AddToCartButton({ productId }: { productId: string }) {
+interface AddToCartButtonProps {
+  productId: string
+  primaryColor?: string
+}
+
+export function AddToCartButton({
+  productId,
+  primaryColor = "#3B82F6",
+}: AddToCartButtonProps) {
   const [loading, setLoading] = useState(false)
 
-  const handleClick = async () => {
-    setLoading(true)
+  const handleAddToCart = async () => {
     try {
+      setLoading(true)
+
       const res = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, quantity: 1 }),
+        body: JSON.stringify({
+          productId,
+          quantity: 1,
+        }),
       })
 
-      const data = await res.json()
-
-      if (res.status === 401) {
-        alert("Devi essere loggato come cliente per usare il carrello.")
-        return
-      }
-
-      if (res.status === 403) {
-        alert(data.error || "Non sei autorizzato ad aggiungere questo prodotto.")
-        return
-      }
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        alert(data.error || "Errore durante l'aggiunta al carrello")
+        alert(data.error || "Errore nell'aggiunta al carrello")
         return
       }
 
-      alert("Prodotto aggiunto al carrello!")
+      alert("Prodotto aggiunto al carrello")
     } catch (error) {
+      console.error("Errore AddToCart:", error)
       alert("Errore di connessione")
     } finally {
       setLoading(false)
@@ -41,11 +44,12 @@ export default function AddToCartButton({ productId }: { productId: string }) {
 
   return (
     <button
-      onClick={handleClick}
+      onClick={handleAddToCart}
       disabled={loading}
-      className="mt-3 w-full bg-blue-500 text-white py-2 rounded text-sm hover:bg-blue-600 transition disabled:bg-gray-400"
+      style={{ backgroundColor: primaryColor }}
+      className="w-full text-white px-4 py-2 rounded text-sm font-medium hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
     >
-      {loading ? "Aggiungo..." : "Aggiungi al carrello"}
+      {loading ? "Aggiunta..." : "Aggiungi al carrello"}
     </button>
   )
 }

@@ -1,53 +1,35 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn } from "next-auth/react"
 
-function SignupForm() {
+export default function SignupPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const inviteToken = searchParams.get("invite")
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: ""
-  })
+  // prendiamo il token dall'URL ?invite=...
+  const inviteToken = searchParams.get("invite") || ""
+
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [masterInfo, setMasterInfo] = useState<any>(null)
-
-  useEffect(() => {
-    if (!inviteToken) {
-      setError("Link di invito non valido")
-      return
-    }
-
-    // Verifica il token e mostra info del Master
-    fetch(`/api/invite/verify?token=${inviteToken}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.valid) {
-          setMasterInfo(data.master)
-        } else {
-          setError("Link di invito non valido o scaduto")
-        }
-      })
-  }, [inviteToken])
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setSuccess(false)
 
-    if (formData.password !== formData.confirmPassword) {
-      setError("Le password non coincidono")
+    if (!inviteToken) {
+      setError("Link invito mancante o non valido.")
       return
     }
 
-    if (formData.password.length < 6) {
-      setError("La password deve essere di almeno 6 caratteri")
+    if (password !== confirmPassword) {
+      setError("Le password non coincidono")
       return
     }
 
@@ -58,51 +40,50 @@ function SignupForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
-          inviteToken
-        })
+          name,
+          email,
+          password,
+          confirmPassword,
+          inviteToken,
+        }),
       })
 
       const data = await response.json()
 
-      if (data.success) {
-        // Auto-login dopo registrazione
-        const result = await signIn("credentials", {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
-        })
-
-        if (result?.ok) {
-          router.push("/dashboard")
-        }
-      } else {
+      if (!response.ok) {
         setError(data.error || "Errore durante la registrazione")
+        return
       }
-    } catch (error) {
+
+      setSuccess(true)
+
+      // dopo un attimo, vai al login
+      setTimeout(() => {
+        router.push("/login")
+      }, 1000)
+    } catch (err) {
+      console.error(err)
       setError("Errore di connessione")
     } finally {
       setLoading(false)
     }
   }
 
+  // Se qualcuno apre /signup SENZA ?invite=..., lo blocchiamo subito
   if (!inviteToken) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-8 rounded-lg shadow-md w-96">
-          <h1 className="text-2xl font-bold mb-4 text-red-600">Errore</h1>
-          <p>Link di invito non valido</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!masterInfo && !error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Caricamento...</p>
+        <div className="bg-white p-6 rounded-lg shadow-md w-96 text-center">
+          <h1 className="text-lg font-bold mb-2">Registrazione non disponibile</h1>
+          <p className="text-sm text-gray-600">
+            Questa pagina è accessibile solo tramite link di invito.
+          </p>
+          <button
+            onClick={() => router.push("/login")}
+            className="mt-4 px-4 py-2 border border-black rounded text-sm hover:bg-gray-100"
+          >
+            Torna al login
+          </button>
         </div>
       </div>
     )
@@ -110,63 +91,67 @@ function SignupForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-2xl font-bold mb-2 text-center">Registrazione</h1>
-        
-        {masterInfo && (
-          <div className="bg-blue-50 p-3 rounded mb-4 text-center">
-            <p className="text-sm text-gray-600">Sei stato invitato da</p>
-            <p className="font-bold text-blue-700">{masterInfo.storeName}</p>
-          </div>
-        )}
+      <div className="bg-white p-8 rounded-lg shadow-md w-96 border-2 border-black">
+        <h1 className="text-2xl font-bold mb-1 text-center">Registrazione</h1>
+        <p className="text-xs text-gray-600 mb-4 text-center">
+          Crea un account collegato al negozio che ti ha invitato.
+        </p>
 
         {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
+          <div className="bg-red-100 text-red-700 border border-red-400 text-xs p-2 rounded mb-3">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Nome</label>
+        {success && (
+          <div className="bg-green-100 text-green-700 border border-green-400 text-xs p-2 rounded mb-3">
+            Registrazione completata. Reindirizzamento al login...
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Nome</label>
             <input
               type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-3 py-2 border border-black rounded text-sm"
+              placeholder="Nome (opzionale)"
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Email</label>
             <input
               type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-3 py-2 border border-black rounded text-sm"
               required
             />
           </div>
 
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Password</label>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Password</label>
             <input
               type="password"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-black rounded text-sm"
               required
             />
           </div>
 
-          <div className="mb-6">
-            <label className="block text-gray-700 mb-2">Conferma Password</label>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">
+              Conferma password
+            </label>
             <input
               type="password"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-              className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-3 py-2 border border-black rounded text-sm"
               required
             />
           </div>
@@ -174,20 +159,23 @@ function SignupForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition disabled:bg-gray-400"
+            className="w-full bg-black text-white py-2 rounded text-sm hover:bg-gray-800 transition disabled:bg-gray-400"
           >
             {loading ? "Registrazione..." : "Registrati"}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-xs text-gray-600">
+          Hai già un account?{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/login")}
+            className="underline"
+          >
+            Accedi
+          </button>
+        </p>
       </div>
     </div>
-  )
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense fallback={<div>Caricamento...</div>}>
-      <SignupForm />
-    </Suspense>
   )
 }
