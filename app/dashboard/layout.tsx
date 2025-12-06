@@ -32,7 +32,7 @@ export default async function DashboardLayout({
       : [
           // SUPER_ADMIN
           { href: "/dashboard", label: "Dashboard" },
-          { href: "/dashboard/admin/masters", label: "Master (presto)" },
+          { href: "/dashboard/admin/masters", label: "Admin – Masters" },
         ]
 
   return (
