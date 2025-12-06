@@ -1,22 +1,20 @@
-import NextAuth from "next-auth"
+import NextAuth, { type NextAuthConfig } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import { PrismaClient } from "@prisma/client"
-import { compare } from "bcryptjs"
+import bcrypt from "bcryptjs"
 
 const prisma = new PrismaClient()
 
-const isDev = process.env.NODE_ENV !== "production"
-
-export const { auth, handlers, signIn, signOut } = NextAuth({
+export const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma) as any,
 
-  // 👇 AGGIUNGI QUESTE DUE RIGHE
+  // 👇 fondamentale per produzione
   secret: process.env.AUTH_SECRET,
   trustHost: true,
 
-  // opzionale ma utile per capire i log su Vercel
-  debug: isDev,
+  // per avere log più chiari (anche in prod per ora)
+  debug: true,
 
   session: {
     strategy: "jwt",
@@ -35,20 +33,26 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email as string },
         })
 
         if (!user || !user.password) {
           return null
         }
 
-        const isValid = await compare(credentials.password, user.password)
-        if (!isValid) return null
+        const isPasswordValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password,
+        )
+
+        if (!isPasswordValid) {
+          return null
+        }
 
         return {
           id: user.id,
-          name: user.name,
           email: user.email,
+          name: user.name,
           role: user.role,
         }
       },
@@ -62,16 +66,19 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role
+        token.sub = (user as any).id
+        ;(token as any).role = (user as any).role
       }
       return token
     },
     async session({ session, token }) {
-      if (token && session.user) {
+      if (session.user) {
         ;(session.user as any).id = token.sub
-        ;(session.user as any).role = token.role
+        ;(session.user as any).role = (token as any).role
       }
       return session
     },
   },
-})
+}
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig)

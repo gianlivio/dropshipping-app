@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Livio App – Multi-tenant E-commerce (Demo)
 
-## Getting Started
+## 1. Cos'è questo progetto
 
-First, run the development server:
+È una piattaforma e-commerce multi-tenant con tre ruoli:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **SUPER_ADMIN** → amministratore globale (struttura pronta, funzioni avanzate da aggiungere)
+- **UTENTEMASTER** → gestisce un negozio (prodotti, inviti clienti, storefront)
+- **UTENTEBASIC** → cliente finale del negozio (carrello, ordini)
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Ogni Master ha il suo “negozio” con:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- catalogo prodotti
+- vetrina pubblica dedicata: `/s/[storeSlug]`
+- clienti collegati tramite link di invito (o QR code)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Ogni cliente Basic:
 
-## Learn More
+- viene creato tramite invito di un Master
+- è collegato a un solo negozio
+- può sfogliare i prodotti, usare il carrello e creare ordini (pagamento simulato).
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 2. Stack Tecnico
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Prisma ORM 5
+- PostgreSQL (Neon – compatibile Supabase)
+- NextAuth v5 (Auth.js) con Prisma Adapter
+- Tailwind CSS
 
-## Deploy on Vercel
+Variabili d'ambiente (NON sono nel repo, solo in locale):
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+DATABASE_URL=...
+AUTH_SECRET=...
+NEXT_PUBLIC_APP_URL=http://localhost:3000
